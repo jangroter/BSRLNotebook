@@ -75,8 +75,12 @@ class SAC:
         if not self.is_test:           
             self.transition = [state, action, reward, new_state, done]
             self.memory.store(*self.transition)
-    
+            
     def train(self):
+        if (len(self.memory) >  BATCH_SIZE and self.total_step > INITIAL_RANDOM_STEPS):
+            self.update_model()
+
+    def update_model(self):
         device = self.device
 
         samples = self.memory.sample_batch()
