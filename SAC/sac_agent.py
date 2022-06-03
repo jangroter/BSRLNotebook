@@ -11,16 +11,16 @@ from SAC.actor_critic import Actor, CriticQ, CriticV
 from torch.nn.utils.clip_grad import clip_grad_norm_
 
 
-GAMMMA = 0.99
+GAMMMA = 0.995
 TAU =5e-3
 INITIAL_RANDOM_STEPS = 100
-POLICY_UPDATE_FREQUENCE = 2
+POLICY_UPDATE_FREQUENCE = 1
 
 BUFFER_SIZE = 1000000
 BATCH_SIZE = 256
 
-LR_A = 3e-4
-LR_Q = 3e-4
+LR_A = 3e-3
+LR_Q = 3e-3
 
 
 class SAC:
