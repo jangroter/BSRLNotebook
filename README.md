@@ -5,9 +5,9 @@ The task of the DRL agent is to learn to maintain a level flight before initiati
 
 This example uses the Soft Actor Critic algorithm (Haarnoja et al., 2018) implement via Pytorch, if however the function names are adhered, any DRL algorithm could be utilized.
 
-To run the example the following packages are required:
-pip install bluesky-simulator[full] 
-https://pytorch.org/get-started/locally/ -> follow this for your operating system
+**To run the example the following packages are required:**
+pip install bluesky-simulator[full]  
+https://pytorch.org/get-started/locally/ -> follow this for your operating system  
 
 
 
