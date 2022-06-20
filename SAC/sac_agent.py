@@ -11,7 +11,7 @@ from SAC.actor_critic import Actor, CriticQ, CriticV
 from torch.nn.utils.clip_grad import clip_grad_norm_
 
 
-GAMMMA = 0.995
+GAMMA = 0.995
 TAU =5e-3
 INITIAL_RANDOM_STEPS = 100
 POLICY_UPDATE_FREQUENCE = 1
@@ -22,13 +22,24 @@ BATCH_SIZE = 256
 LR_A = 3e-3
 LR_Q = 3e-3
 
+N_NEURONS = 256
+
 
 class SAC:
-    def __init__(self, action_dim, state_dim):                
+    def __init__(self, action_dim, state_dim, alpha = LR_A, beta = LR_Q, gamma = GAMMA, tau = TAU,
+                n_neurons = N_NEURONS, buffer_size = BUFFER_SIZE, batch_size = BATCH_SIZE):                
         self.statedim = state_dim
         self.actiondim = action_dim
 
-        self.memory = ReplayBuffer(self.statedim,self.actiondim, BUFFER_SIZE, BATCH_SIZE)
+        self.alpha = alpha
+        self.beta = beta
+        self.gamma = gamma
+        self.tau = tau
+        self.n_neurons = n_neurons
+        self.buffer_size = buffer_size
+        self.batch_size = batch_size
+
+        self.memory = ReplayBuffer(self.statedim,self.actiondim, self.buffer_size, self.batch_size)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
@@ -36,19 +47,19 @@ class SAC:
         self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=3e-4)
 
-        self.actor = Actor(self.statedim, self.actiondim).to(self.device)
+        self.actor = Actor(self.statedim, self.actiondim, hidden_dim1=self.n_neurons,hidden_dim2=self.n_neurons).to(self.device)
 
-        self.vf = CriticV(self.statedim).to(self.device)
-        self.vf_target = CriticV(self.statedim).to(self.device)
+        self.vf = CriticV(self.statedim, hidden_dim1=self.n_neurons,hidden_dim2=self.n_neurons).to(self.device)
+        self.vf_target = CriticV(self.statedim, hidden_dim1=self.n_neurons,hidden_dim2=self.n_neurons).to(self.device)
         self.vf_target.load_state_dict(self.vf.state_dict())
 
-        self.qf1 = CriticQ(self.statedim + self.actiondim).to(self.device)
-        self.qf2 = CriticQ(self.statedim + self.actiondim).to(self.device)
+        self.qf1 = CriticQ(self.statedim + self.actiondim, hidden_dim1=self.n_neurons,hidden_dim2=self.n_neurons).to(self.device)
+        self.qf2 = CriticQ(self.statedim + self.actiondim, hidden_dim1=self.n_neurons,hidden_dim2=self.n_neurons).to(self.device)
 
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=LR_A)
-        self.vf_optimizer = optim.Adam(self.vf.parameters(), lr=LR_Q)
-        self.qf1_optimizer = optim.Adam(self.qf1.parameters(), lr=LR_Q)
-        self.qf2_optimizer = optim.Adam(self.qf2.parameters(), lr=LR_Q)
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=self.alpha)
+        self.vf_optimizer = optim.Adam(self.vf.parameters(), lr=self.beta)
+        self.qf1_optimizer = optim.Adam(self.qf1.parameters(), lr=self.beta)
+        self.qf2_optimizer = optim.Adam(self.qf2.parameters(), lr=self.beta)
 
         self.transition = [[]]
 
@@ -103,7 +114,7 @@ class SAC:
         q1_pred = self.qf1(state, action)
         q2_pred = self.qf2(state, action)
         vf_target = self.vf_target(next_state)
-        q_target = reward + GAMMMA * vf_target * mask
+        q_target = reward + self.gamma * vf_target * mask
         qf1_loss = F.mse_loss(q_target.detach(), q1_pred)
         qf2_loss = F.mse_loss(q_target.detach(), q2_pred)
 
@@ -159,7 +170,7 @@ class SAC:
         for t_param, l_param in zip(
             self.vf_target.parameters(), self.vf.parameters()
         ):
-            t_param.data.copy_(TAU * l_param.data + (1.0 - TAU) * t_param.data)
+            t_param.data.copy_(self.tau * l_param.data + (1.0 - self.tau) * t_param.data)
 
     def normalizeState(self, s_t):
         return s_t
